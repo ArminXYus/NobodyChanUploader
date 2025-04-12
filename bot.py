@@ -51,7 +51,7 @@ async def get_file(update: Update, context: CallbackContext) -> None:
         file = files[file_id]
         # ارسال فایل همراه با کپشن
         await update.message.reply_document(
-            document=file['file'],
+            document=file['file_id'],
             caption=file['caption']
         )
     else:
@@ -73,9 +73,9 @@ async def upload_file(update: Update, context: CallbackContext) -> None:
             # نمایش اطلاعات فایل دریافتی و کپشن
             await update.message.reply_text(f"فایل دریافتی: {file_name} با file_id: {file_id}\nکپشن: {caption}")
             
-            # ذخیره‌سازی فایل و کپشن در فایل JSON
+            # ذخیره‌سازی فقط file_id و کپشن در فایل JSON
             files = load_files()
-            files[file_id] = {"file": file, "caption": caption, "link": file_link}
+            files[file_id] = {"file_id": file_id, "caption": caption, "link": file_link}
             save_files(files)
             
             await update.message.reply_text(f"فایل آپلود شد! لینک دسترسی: {file_link}\nکپشن: {caption}")
