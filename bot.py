@@ -1,102 +1,61 @@
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-import json
-import os
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 
-# توکن بات تلگرام
+# توکن ربات تلگرام شما
 TOKEN = '6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM'
 
-# یوزرنیم بات تلگرام (به صورت دستی وارد کنید)
-BOT_USERNAME = 'NobodyUp_bot'  # به اینجا یوزرنیم بات خود را وارد کنید
+# لیستی برای نگهداری فایل‌ها و لینک‌های استارت
+files_data = {}
 
-# ادمین‌ها
-ADMINS = ['1866821551']
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("سلام! شما می‌توانید فایل‌های خود را ارسال کنید.")
 
-# ذخیره‌سازی فایل‌ها
-FILE_STORAGE = "files.json"
+def admin_handler(update: Update, context: CallbackContext) -> None:
+    # اطمینان از اینکه فقط ادمین می‌تواند فایل ارسال کند
+    admin_id = '1866821551'
+    if update.message.from_user.id == int(admin_id):
+        # گرفتن فایل و کپشن
+        file = update.message.document
+        caption = update.message.caption if update.message.caption else ""
 
-# تابع برای بارگذاری فایل‌ها
-def load_files():
-    if os.path.exists(FILE_STORAGE):
-        with open(FILE_STORAGE, "r") as file:
-            return json.load(file)
+        # ذخیره فایل
+        file_id = file.file_id
+        file_data = {'file_id': file_id, 'caption': caption}
+        files_data[file_id] = file_data
+
+        # ارسال تایید به ادمین
+        update.message.reply_text(f"فایل با موفقیت ذخیره شد! لینک استارت بات: https://t.me/{context.bot.username}?start=get_{file_id}")
     else:
-        # اگر فایل وجود نداشت، یک فایل جدید ایجاد می‌کنیم
-        with open(FILE_STORAGE, "w") as file:
-            json.dump({}, file)
-        return {}
+        update.message.reply_text("شما اجازه ارسال فایل ندارید.")
 
-# تابع برای ذخیره فایل‌ها
-def save_files(files):
-    with open(FILE_STORAGE, "w") as file:
-        json.dump(files, file)
+def get_file(update: Update, context: CallbackContext) -> None:
+    # گرفتن فایل از لینک استارت
+    if context.args:
+        file_id = context.args[0]
+        file_data = files_data.get(file_id)
 
-# فرمان start
-async def start(update: Update, context: CallbackContext) -> None:
-    user = update.message.from_user
-    if str(user.id) in ADMINS:
-        await update.message.reply_text(
-            f"سلام {user.first_name}, ارسال فایل رو شروع کن."
-        )
-    else:
-        await update.message.reply_text("دسترسی شما مجاز نیست.")
-
-# فرمان برای دریافت فایل
-async def get_file(update: Update, context: CallbackContext) -> None:
-    # لینک استارت که کاربر می‌فرستد، باید شامل 'get_<file_id>' باشد
-    file_id = update.message.text.split(' ')[1].replace('get_', '')  # حذف 'get_' از فایل آیدی
-    files = load_files()
-
-    if file_id in files:
-        file = files[file_id]
-        # ارسال فایل همراه با کپشن
-        await update.message.reply_document(
-            document=file['file_id'],
-            caption=file['caption']
-        )
-    else:
-        await update.message.reply_text("فایلی با این شناسه پیدا نشد.")
-
-# فرمان ارسال فایل توسط ادمین
-async def upload_file(update: Update, context: CallbackContext) -> None:
-    user = update.message.from_user
-    if str(user.id) in ADMINS:
-        if update.message.document:
-            file = update.message.document
-            file_id = file.file_id
-            file_name = file.file_name
-            caption = update.message.caption if update.message.caption else "بدون کپشن"
-            
-            # لینک استارت برای ارسال فایل
-            file_link = f"https://t.me/{BOT_USERNAME}?start=get_{file_id}"
-            
-            # نمایش اطلاعات فایل دریافتی و کپشن
-            await update.message.reply_text(f"فایل دریافتی: {file_name} با file_id: {file_id}\nکپشن: {caption}")
-            
-            # ذخیره‌سازی فقط file_id و کپشن در فایل JSON
-            files = load_files()
-            files[file_id] = {"file_id": file_id, "caption": caption, "link": file_link}
-            save_files(files)
-            
-            await update.message.reply_text(f"فایل آپلود شد! لینک دسترسی: {file_link}\nکپشن: {caption}")
+        if file_data:
+            file = context.bot.get_file(file_data['file_id'])
+            file.download(f"{file_id}.jpg")  # ذخیره فایل
+            update.message.reply_text(f"فایل با موفقیت دانلود شد: {file_data['caption']}")
         else:
-            await update.message.reply_text("لطفاً یک فایل ارسال کنید.")
+            update.message.reply_text("فایل یافت نشد.")
     else:
-        await update.message.reply_text("شما ادمین نیستید!")
+        update.message.reply_text("لطفاً لینک استارت صحیح را وارد کنید.")
 
-# استفاده از application.run_polling() بدون نیاز به asyncio.run()
 def main() -> None:
-    application = Application.builder().token(TOKEN).build()
+    # ایجاد و راه‌اندازی ربات
+    updater = Updater(TOKEN)
 
-    # دستورات بات
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("get", get_file))
+    # اضافه کردن دستورات
+    dispatcher = updater.dispatcher
+    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(MessageHandler(Filters.document, admin_handler))  # گرفتن فایل از ادمین
+    dispatcher.add_handler(CommandHandler('get', get_file))  # دریافت فایل از لینک استارت
 
-    # تغییر فیلتر برای دریافت هر نوع فایل
-    application.add_handler(MessageHandler(filters.ALL, upload_file))
-
-    # شروع بات
-    application.run_polling()
+    # شروع ربات
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     main()
