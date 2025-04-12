@@ -6,18 +6,27 @@ import os
 # توکن بات تلگرام
 TOKEN = '6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM'
 
+# یوزرنیم بات تلگرام (به صورت دستی وارد کنید)
+BOT_USERNAME = 'NobodyUp_bot'  # به اینجا یوزرنیم بات خود را وارد کنید
+
 # ادمین‌ها
 ADMINS = ['1866821551']
 
 # ذخیره‌سازی فایل‌ها
 FILE_STORAGE = "files.json"
 
+# تابع برای بارگذاری فایل‌ها
 def load_files():
     if os.path.exists(FILE_STORAGE):
         with open(FILE_STORAGE, "r") as file:
             return json.load(file)
-    return {}
+    else:
+        # اگر فایل وجود نداشت، یک فایل جدید ایجاد می‌کنیم
+        with open(FILE_STORAGE, "w") as file:
+            json.dump({}, file)
+        return {}
 
+# تابع برای ذخیره فایل‌ها
 def save_files(files):
     with open(FILE_STORAGE, "w") as file:
         json.dump(files, file)
@@ -51,8 +60,8 @@ async def upload_file(update: Update, context: CallbackContext) -> None:
             file = update.message.document
             file_id = file.file_id
             file_name = file.file_name
-            # اصلاح لینک فایل برای استفاده از update.bot.username به جای update.message.bot.username
-            file_link = f"https://t.me/{update.bot.username}?start={file_id}"
+            # استفاده از یوزرنیم ثابت به جای context.bot.username
+            file_link = f"https://t.me/{BOT_USERNAME}?start={file_id}"
             
             # نمایش اطلاعات فایل دریافتی
             await update.message.reply_text(f"فایل دریافتی: {file_name} با file_id: {file_id}")
