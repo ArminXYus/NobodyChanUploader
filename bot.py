@@ -1,6 +1,6 @@
 import os
 from telegram import Update, ForceReply
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 import json
 
 # برای نگهداری آیدی فایل‌ها
