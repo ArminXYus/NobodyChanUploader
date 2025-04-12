@@ -64,8 +64,8 @@ async def upload_file(update: Update, context: CallbackContext) -> None:
     else:
         await update.message.reply_text("شما ادمین نیستید!")
 
-async def main() -> None:
-    # ایجاد application و dispatcher
+# استفاده از application.run_polling() بدون نیاز به asyncio.run()
+def main() -> None:
     application = Application.builder().token(TOKEN).build()
 
     # دستورات بات
@@ -74,8 +74,7 @@ async def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL, upload_file))
 
     # شروع بات
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    main()
