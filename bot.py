@@ -51,7 +51,11 @@ async def upload_file(update: Update, context: CallbackContext) -> None:
             file = update.message.document
             file_id = file.file_id
             file_name = file.file_name
-            file_link = f"https://t.me/{update.message.bot.username}?start={file_id}"
+            # اصلاح لینک فایل برای استفاده از update.bot.username به جای update.message.bot.username
+            file_link = f"https://t.me/{update.bot.username}?start={file_id}"
+            
+            # نمایش اطلاعات فایل دریافتی
+            await update.message.reply_text(f"فایل دریافتی: {file_name} با file_id: {file_id}")
             
             # ذخیره‌سازی فایل در فایل JSON
             files = load_files()
