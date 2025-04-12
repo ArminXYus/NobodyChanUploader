@@ -13,7 +13,7 @@ BOT_USERNAME = 'NobodyUp_bot'  # به اینجا یوزرنیم بات خود ر
 ADMINS = ['1866821551']
 
 # ذخیره‌سازی فایل‌ها
-FILE_STORAGE = "files.json
+FILE_STORAGE = "files.json"
 
 # تابع برای بارگذاری فایل‌ها
 def load_files():
