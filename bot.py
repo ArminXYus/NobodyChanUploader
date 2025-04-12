@@ -43,12 +43,17 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 # فرمان برای دریافت فایل
 async def get_file(update: Update, context: CallbackContext) -> None:
-    file_id = update.message.text.split(' ')[1]
+    # لینک استارت که کاربر می‌فرستد، باید شامل 'get_<file_id>' باشد
+    file_id = update.message.text.split(' ')[1].replace('get_', '')  # حذف 'get_' از فایل آیدی
     files = load_files()
 
     if file_id in files:
         file = files[file_id]
-        await update.message.reply_text(f"لینک فایل شما: {file['link']}")
+        # ارسال فایل همراه با کپشن
+        await update.message.reply_document(
+            document=file['file'],
+            caption=file['caption']
+        )
     else:
         await update.message.reply_text("فایلی با این شناسه پیدا نشد.")
 
@@ -60,18 +65,20 @@ async def upload_file(update: Update, context: CallbackContext) -> None:
             file = update.message.document
             file_id = file.file_id
             file_name = file.file_name
-            # استفاده از یوزرنیم ثابت به جای context.bot.username
-            file_link = f"https://t.me/{BOT_USERNAME}?start={file_id}"
+            caption = update.message.caption if update.message.caption else "بدون کپشن"
             
-            # نمایش اطلاعات فایل دریافتی
-            await update.message.reply_text(f"فایل دریافتی: {file_name} با file_id: {file_id}")
+            # لینک استارت برای ارسال فایل
+            file_link = f"https://t.me/{BOT_USERNAME}?start=get_{file_id}"
             
-            # ذخیره‌سازی فایل در فایل JSON
+            # نمایش اطلاعات فایل دریافتی و کپشن
+            await update.message.reply_text(f"فایل دریافتی: {file_name} با file_id: {file_id}\nکپشن: {caption}")
+            
+            # ذخیره‌سازی فایل و کپشن در فایل JSON
             files = load_files()
-            files[file_id] = {"name": file_name, "link": file_link}
+            files[file_id] = {"file": file, "caption": caption, "link": file_link}
             save_files(files)
             
-            await update.message.reply_text(f"فایل آپلود شد! لینک دسترسی: {file_link}")
+            await update.message.reply_text(f"فایل آپلود شد! لینک دسترسی: {file_link}\nکپشن: {caption}")
         else:
             await update.message.reply_text("لطفاً یک فایل ارسال کنید.")
     else:
