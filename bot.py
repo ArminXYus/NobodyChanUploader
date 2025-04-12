@@ -71,7 +71,9 @@ def main() -> None:
     # دستورات بات
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("get", get_file))
-    application.add_handler(MessageHandler(filters.Document.ALL, upload_file))
+
+    # تغییر فیلتر برای دریافت هر نوع فایل
+    application.add_handler(MessageHandler(filters.ALL, upload_file))
 
     # شروع بات
     application.run_polling()
