@@ -17,6 +17,11 @@ async def start(update: Update, context: CallbackContext):
 
 # فرمان برای دریافت فایل ویدیویی
 async def handle_document(update: Update, context: CallbackContext):
+    # بررسی اینکه آیا فایل مستقیماً ارسال شده یا فورواد شده است
+    if update.message.forward_from is not None:
+        # اگر فایل فورواد شده باشد، پیامی ارسال نمی‌کنیم
+        return
+
     file = update.message.document
     file_id = file.file_id
     file_name = file.file_name
