@@ -1,10 +1,14 @@
 import logging
+import uuid
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # تنظیمات لاگینگ
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# دیکشنری برای ذخیره فایل‌ها و شناسه‌های منحصر به فرد
+file_storage = {}
 
 # فرمان /start
 async def start(update: Update, context: CallbackContext):
@@ -20,11 +24,35 @@ async def handle_document(update: Update, context: CallbackContext):
     # دانلود فایل از تلگرام
     new_file = await context.bot.get_file(file_id)
 
+    # ایجاد شناسه منحصر به فرد برای فایل
+    file_key = str(uuid.uuid4())  # شناسه منحصر به فرد با استفاده از uuid
+
+    # ذخیره فایل در دیکشنری
+    file_storage[file_key] = {
+        "file_id": file_id,
+        "file_name": file_name,
+        "file_path": new_file.file_path
+    }
+
     # لینک استارت به شکل صحیح برای دریافت فایل
-    start_link = f"https://t.me/{context.bot.username}?start=get_{file_id}"
-    
+    start_link = f"https://t.me/{context.bot.username}?start=get_{file_key}"
+
     # ارسال لینک استارت به کاربر
     await update.message.reply_text(f"فایل شما با موفقیت ذخیره شد!\nبرای دریافت فایل از لینک استارت زیر استفاده کنید:\n{start_link}")
+
+# فرمان برای دریافت فایل از لینک استارت
+async def get_file_from_link(update: Update, context: CallbackContext):
+    start_arg = update.message.text.split(' ')[1]  # دریافت پارامتر بعد از `start=`
+    
+    # بررسی اینکه شناسه فایل موجود است یا نه
+    if start_arg.startswith("get_") and start_arg[4:] in file_storage:
+        file_key = start_arg[4:]
+        file_data = file_storage[file_key]
+        
+        # ارسال فایل به کاربر
+        await update.message.reply_document(document=file_data["file_path"], filename=file_data["file_name"])
+    else:
+        await update.message.reply_text("لینک معتبر نیست یا فایل یافت نشد.")
 
 # تابع main
 def main():
@@ -36,6 +64,7 @@ def main():
     # اضافه کردن هندلرها
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    application.add_handler(MessageHandler(filters.Regex(r'^/start=get_'), get_file_from_link))
 
     # شروع ربات
     application.run_polling()
