@@ -13,34 +13,38 @@ file_storage = {}
 # فرمان /start
 async def start(update: Update, context: CallbackContext):
     # ارسال پیامی به ادمین بعد از شروع ربات
-    await update.message.reply_text("سلام! لطفاً فایل خود را ارسال کنید.")
+    await update.message.reply_text("سلام! لطفاً فایل ویدیویی خود را ارسال کنید.")
 
-# فرمان برای دریافت فایل
+# فرمان برای دریافت فایل ویدیویی
 async def handle_document(update: Update, context: CallbackContext):
     file = update.message.document
     file_id = file.file_id
     file_name = file.file_name
     caption = update.message.caption  # دریافت کپشن فایل
 
-    # دانلود فایل از تلگرام
-    new_file = await context.bot.get_file(file_id)
+    # بررسی اینکه آیا فایل ویدیویی است
+    if file_name.endswith(('.mp4', '.mkv')):
+        # دانلود فایل از تلگرام
+        new_file = await context.bot.get_file(file_id)
 
-    # ایجاد شناسه منحصر به فرد برای فایل
-    file_key = str(uuid.uuid4())  # شناسه منحصر به فرد با استفاده از uuid
+        # ایجاد شناسه منحصر به فرد برای فایل
+        file_key = str(uuid.uuid4())  # شناسه منحصر به فرد با استفاده از uuid
 
-    # ذخیره فایل در دیکشنری
-    file_storage[file_key] = {
-        "file_id": file_id,
-        "file_name": file_name,
-        "file_path": new_file.file_path,
-        "caption": caption  # ذخیره کپشن
-    }
+        # ذخیره فایل در دیکشنری
+        file_storage[file_key] = {
+            "file_id": file_id,
+            "file_name": file_name,
+            "file_path": new_file.file_path,
+            "caption": caption  # ذخیره کپشن
+        }
 
-    # لینک استارت به شکل صحیح برای دریافت فایل
-    start_link = f"https://t.me/{context.bot.username}?start=get_{file_key}"
+        # لینک استارت به شکل صحیح برای دریافت فایل
+        start_link = f"https://t.me/{context.bot.username}?start=get_{file_key}"
 
-    # ارسال لینک استارت به کاربر
-    await update.message.reply_text(f"فایل شما با موفقیت ذخیره شد!\nبرای دریافت فایل از لینک استارت زیر استفاده کنید:\n{start_link}")
+        # ارسال لینک استارت به کاربر
+        await update.message.reply_text(f"فایل ویدیویی شما با موفقیت ذخیره شد!\nبرای دریافت فایل از لینک استارت زیر استفاده کنید:\n{start_link}")
+    else:
+        await update.message.reply_text("لطفاً یک فایل ویدیویی ارسال کنید (.mp4, .mkv)")
 
 # فرمان برای دریافت فایل از لینک استارت
 async def get_file_from_link(update: Update, context: CallbackContext):
