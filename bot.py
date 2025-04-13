@@ -20,6 +20,7 @@ async def handle_document(update: Update, context: CallbackContext):
     file = update.message.document
     file_id = file.file_id
     file_name = file.file_name
+    caption = update.message.caption  # دریافت کپشن فایل
 
     # دانلود فایل از تلگرام
     new_file = await context.bot.get_file(file_id)
@@ -31,7 +32,8 @@ async def handle_document(update: Update, context: CallbackContext):
     file_storage[file_key] = {
         "file_id": file_id,
         "file_name": file_name,
-        "file_path": new_file.file_path
+        "file_path": new_file.file_path,
+        "caption": caption  # ذخیره کپشن
     }
 
     # لینک استارت به شکل صحیح برای دریافت فایل
@@ -49,8 +51,12 @@ async def get_file_from_link(update: Update, context: CallbackContext):
         file_key = start_arg[4:]
         file_data = file_storage[file_key]
         
-        # ارسال فایل به کاربر
-        await update.message.reply_document(document=file_data["file_path"], filename=file_data["file_name"])
+        # ارسال فایل به همراه کپشن به کاربر
+        await update.message.reply_document(
+            document=file_data["file_path"], 
+            filename=file_data["file_name"],
+            caption=file_data["caption"]  # ارسال کپشن فایل
+        )
     else:
         await update.message.reply_text("لینک معتبر نیست یا فایل یافت نشد.")
 
