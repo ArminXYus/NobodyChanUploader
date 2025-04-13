@@ -1,59 +1,53 @@
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram import Bot, Update
+from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
+from telegram.ext import CallbackContext
+import os
+import logging
 
-# توکن ربات تلگرام شما
-TOKEN = '6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM'
+# تنظیمات لاگینگ برای اشکال‌زدایی
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# لیستی برای نگهداری فایل‌ها و لینک‌های استارت
-files_data = {}
+# مسیر ذخیره فایل‌ها
+UPLOAD_DIR = '/path/to/save/files'
 
-async def start(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("سلام! شما می‌توانید فایل‌های خود را ارسال کنید.")
+# فرمان /start
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("سلام! برای دریافت فایل‌ها، لطفاً لینک شروع را بزنید.")
 
-async def admin_handler(update: Update, context: CallbackContext) -> None:
-    # اطمینان از اینکه فقط ادمین می‌تواند فایل ارسال کند
-    admin_id = '1866821551'
-    if update.message.from_user.id == int(admin_id):
-        # گرفتن فایل و کپشن
-        file = update.message.document
-        caption = update.message.caption if update.message.caption else ""
+# فرمان برای دریافت فایل
+def handle_document(update: Update, context: CallbackContext):
+    file = update.message.document
+    file_id = file.file_id
+    file_name = file.file_name
 
-        # ذخیره فایل
-        file_id = file.file_id
-        file_data = {'file_id': file_id, 'caption': caption}
-        files_data[file_id] = file_data
+    # دانلود فایل
+    new_file = context.bot.get_file(file_id)
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+    new_file.download(file_path)
 
-        # ارسال تایید به ادمین
-        await update.message.reply_text(f"فایل با موفقیت ذخیره شد! لینک استارت بات: https://t.me/{context.bot.username}?start=get_{file_id}")
-    else:
-        await update.message.reply_text("شما اجازه ارسال فایل ندارید.")
+    # ارسال لینک به کاربر
+    start_link = f"https://t.me/{context.bot.username}?start=get_{file_id}"
+    update.message.reply_text(f"فایل با موفقیت ذخیره شد! برای دریافت آن از لینک زیر استفاده کنید:\n{start_link}")
 
-async def get_file(update: Update, context: CallbackContext) -> None:
-    # گرفتن فایل از لینک استارت
-    if context.args:
-        file_id = context.args[0]
-        file_data = files_data.get(file_id)
+# تابع main
+def main():
+    # دریافت API Token از BotFather
+    TOKEN = '6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM'
 
-        if file_data:
-            file = await context.bot.get_file(file_data['file_id'])
-            await file.download(f"{file_id}.jpg")  # ذخیره فایل
-            await update.message.reply_text(f"فایل با موفقیت دانلود شد: {file_data['caption']}")
-        else:
-            await update.message.reply_text("فایل یافت نشد.")
-    else:
-        await update.message.reply_text("لطفاً لینک استارت صحیح را وارد کنید.")
+    updater = Updater(TOKEN, use_context=True)
 
-def main() -> None:
-    # ایجاد و راه‌اندازی ربات
-    application = Application.builder().token(TOKEN).build()
+    dp = updater.dispatcher
 
-    # اضافه کردن دستورات
-    application.add_handler(CommandHandler('start', start))
-    application.add_handler(MessageHandler(filters.Document.ALL, admin_handler))  # گرفتن فایل از ادمین
-    application.add_handler(CommandHandler('get', get_file))  # دریافت فایل از لینک استارت
+    # اضافه کردن هندلرها
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.document, handle_document))
 
     # شروع ربات
-    application.run_polling()
+    updater.start_polling()
+
+    updater.idle()
 
 if __name__ == '__main__':
     main()
