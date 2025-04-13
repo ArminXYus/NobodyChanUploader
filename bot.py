@@ -20,11 +20,10 @@ async def handle_document(update: Update, context: CallbackContext):
     # دانلود فایل از تلگرام
     new_file = await context.bot.get_file(file_id)
 
-    # لینک دانلود فایل
-    file_url = new_file.file_path  # این لینک به طور مستقیم به فایل در تلگرام اشاره دارد
-
-    # ارسال لینک به ادمین و کاربر
-    start_link = f"https://t.me/{context.bot.username}?start={file_id}"
+    # لینک استارت به شکل صحیح برای دریافت فایل
+    start_link = f"https://t.me/{context.bot.username}?start=get_{file_id}"
+    
+    # ارسال لینک استارت به کاربر
     await update.message.reply_text(f"فایل شما با موفقیت ذخیره شد!\nبرای دریافت فایل از لینک استارت زیر استفاده کنید:\n{start_link}")
 
 # تابع main
