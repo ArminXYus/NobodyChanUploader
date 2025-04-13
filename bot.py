@@ -1,5 +1,6 @@
-import requests
+import http.client
 import json
+import urllib.parse
 
 # توکن ربات تلگرام خود را وارد کنید
 TOKEN = "6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM"  
@@ -36,10 +37,15 @@ def handle_telegram_update(update):
 
 # دریافت لینک فایل از سرور تلگرام
 def get_telegram_file_url(file_id):
-    url = f"https://api.telegram.org/bot{TOKEN}/getFile?file_id={file_id}"
-    response = requests.get(url)
-    result = response.json()
-
+    conn = http.client.HTTPSConnection("api.telegram.org")
+    
+    # ارسال درخواست GET برای دریافت اطلاعات فایل
+    conn.request("GET", f"/bot{TOKEN}/getFile?file_id={file_id}")
+    
+    response = conn.getresponse()
+    result = json.loads(response.read().decode("utf-8"))
+    conn.close()
+    
     if result["ok"]:
         file_path = result["result"]["file_path"]
         return f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
@@ -48,12 +54,21 @@ def get_telegram_file_url(file_id):
 
 # ارسال پیام به چت تلگرام
 def send_message(chat_id, text):
-    url = f"{API_URL}sendMessage"
+    conn = http.client.HTTPSConnection("api.telegram.org")
+    
     payload = {
         "chat_id": chat_id,
         "text": text
     }
-    response = requests.post(url, json=payload)
+    
+    headers = {'Content-Type': 'application/json'}
+    
+    # ارسال درخواست POST برای ارسال پیام
+    conn.request("POST", f"/bot{TOKEN}/sendMessage", body=json.dumps(payload), headers=headers)
+    
+    response = conn.getresponse()
+    print(response.read().decode("utf-8"))
+    conn.close()
 
 # تابع اصلی که وبهوک را پردازش می‌کند
 def main(request):
@@ -61,4 +76,3 @@ def main(request):
 
     # پردازش آپدیت
     return handle_telegram_update(update)
-
