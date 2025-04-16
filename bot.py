@@ -87,8 +87,10 @@ async def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_file))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^/getfile '), send_file))
 
+    # حذف استفاده از asyncio.run() و استفاده از run_polling() که خودش حلقه رویداد را مدیریت می‌کند
     await application.run_polling()
 
 if __name__ == '__main__':
+    # اجرای مستقیم تابع main بدون استفاده از asyncio.run()
     import asyncio
-    asyncio.run(main())
+    asyncio.get_event_loop().run_until_complete(main())
