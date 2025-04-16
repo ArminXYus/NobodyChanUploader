@@ -84,7 +84,7 @@ async def main() -> None:
 
     # افزودن هندلرهای مختلف
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.Document.ALL | filters.Photo, handle_file))
+    application.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_file))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^/getfile '), send_file))
 
     await application.run_polling()
