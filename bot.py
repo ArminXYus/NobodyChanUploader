@@ -92,4 +92,4 @@ async def main() -> None:
 if __name__ == '__main__':
     # استفاده از run_polling به طور مستقیم و حذف asyncio.run()
     import asyncio
-    asyncio.run(main())  # از اینجا استفاده می‌کنیم که asyncio خودش حلقه رویداد را مدیریت کند
+    asyncio.get_event_loop().run_until_complete(main())  # از اینجا استفاده می‌کنیم که asyncio خودش حلقه رویداد را مدیریت کند
