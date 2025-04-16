@@ -1,72 +1,93 @@
-import os
 import logging
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-import pyshorteners
+import uuid
+import os
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# تنظیمات اولیه
-TOKEN = os.getenv('TELEGRAM_TOKEN')  # توکن ربات از Railway
-ADMIN_USERS = [1866821551]  # ID ادمین‌ها
-UPLOAD_DIR = 'uploaded_files/'
-
-# فعال‌سازی logging برای اشکال‌زدایی
+# تنظیمات لاگ
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# اطمینان از ایجاد دایرکتوری برای ذخیره فایل‌ها
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+# دریافت توکن ربات از متغیر محیطی
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 
-# تابع استارت برای کاربرانی که از لینک استارت استفاده می‌کنند
-def start(update: Update, context: CallbackContext) -> None:
-    # دریافت شناسه فایل از داده‌های start
-    file_unique_id = context.args[0] if context.args else None
+# دریافت شناسه ادمین‌ها از متغیر محیطی
+ADMINS = list(map(int, os.getenv('ADMINS').split(',')))
+
+# اطلاعات دیتابیس PostgreSQL (این را از Railway گرفته‌اید)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# تنظیمات دیتابیس
+Base = declarative_base()
+
+class FileInfo(Base):
+    __tablename__ = 'files'
     
-    if file_unique_id:
-        # تلاش برای پیدا کردن فایل بر اساس unique_id
-        file_path = os.path.join(UPLOAD_DIR, f"{file_unique_id}.pdf")  # فرض کردیم که فایل PDF است
-        if os.path.exists(file_path):
-            update.message.reply_document(document=open(file_path, 'rb'))
-        else:
-            update.message.reply_text("متاسفانه فایل مورد نظر یافت نشد.")
-    else:
-        update.message.reply_text('لطفا فایل ارسال کنید.')
+    id = Column(Integer, primary_key=True)
+    file_id = Column(String, nullable=False)
+    caption = Column(Text)
+    user_id = Column(Integer, nullable=False)
 
-# دریافت فایل از کاربر
+# ایجاد دیتابیس و جدول
+engine = create_engine(DATABASE_URL)
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+
+# تابع شروع (Start) ربات
+def start(update: Update, context: CallbackContext) -> None:
+    user = update.message.from_user
+    unique_link = f'https://t.me/{context.bot.username}?start={str(uuid.uuid4())}'
+    update.message.reply_text(f'سلام {user.first_name}! برای دریافت فایل، روی لینک زیر کلیک کنید:\n{unique_link}')
+
+# تابع ذخیره فایل در دیتابیس
 def handle_file(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id
+    user = update.message.from_user
+    file = update.message.document or update.message.photo[-1]  # برای انواع فایل‌ها و تصاویر
+    file_id = file.file_id
+    file_caption = update.message.caption
 
-    # چک کردن که آیا کاربر از ادمین‌ها است یا خیر
-    if user_id not in ADMIN_USERS:
-        update.message.reply_text("شما مجاز به ارسال فایل نیستید!")
+    # اگر کاربر ادمین نبود، فایل را رد کنید
+    if user.id not in ADMINS:
+        update.message.reply_text('شما مجاز به ارسال فایل نیستید.')
         return
 
-    # دریافت فایل و ذخیره‌سازی آن
-    file = update.message.document
-    if file:
-        # دریافت فایل و ذخیره‌سازی آن
-        file_unique_id = file.file_unique_id
-        file_path = os.path.join(UPLOAD_DIR, f"{file_unique_id}.pdf")
-        file.download(file_path)
-        
-        # ایجاد لینک استارت
-        start_link = f"https://t.me/{update.message.bot.username}?start={file_unique_id}"
+    # ذخیره اطلاعات فایل در دیتابیس
+    session = Session()
+    new_file = FileInfo(file_id=file_id, caption=file_caption, user_id=user.id)
+    session.add(new_file)
+    session.commit()
+    session.close()
 
-        # ارسال لینک استارت به کاربر
-        update.message.reply_text(f"فایل شما با موفقیت ذخیره شد! برای دسترسی به فایل خود، از لینک زیر استفاده کنید:\n{start_link}")
+    update.message.reply_text(f'فایل با موفقیت آپلود شد! ID فایل: {file_id}')
 
-def main():
+# تابع ارسال فایل به کاربر بر اساس لینک استارت
+def send_file(update: Update, context: CallbackContext) -> None:
+    start_param = update.message.text.split(' ')[1]
+    session = Session()
+    file_info = session.query(FileInfo).filter(FileInfo.file_id == start_param).first()
+    session.close()
+
+    if file_info:
+        file = context.bot.get_file(file_info.file_id)
+        file.download(f"file_{start_param}")
+        update.message.reply_document(document=open(f"file_{start_param}", 'rb'))
+    else:
+        update.message.reply_text("این فایل یافت نشد.")
+
+# تابع اصلی ربات
+def main() -> None:
     updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
 
-    # ثبت دستور استارت
-    dispatcher.add_handler(CommandHandler('start', start))
+    # افزودن هندلرهای مختلف
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(MessageHandler(Filters.document | Filters.photo, handle_file))
+    dispatcher.add_handler(MessageHandler(Filters.text & Filters.regex('^/getfile '), send_file))
 
-    # ثبت handler برای دریافت فایل
-    dispatcher.add_handler(MessageHandler(Filters.document, handle_file))
-
-    # شروع ربات
     updater.start_polling()
     updater.idle()
 
