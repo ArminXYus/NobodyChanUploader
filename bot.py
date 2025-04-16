@@ -90,6 +90,6 @@ async def main() -> None:
     await application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
     # استفاده از run_polling به طور مستقیم و حذف asyncio.run()
+    import asyncio
     asyncio.run(main())  # از اینجا استفاده می‌کنیم که asyncio خودش حلقه رویداد را مدیریت کند
