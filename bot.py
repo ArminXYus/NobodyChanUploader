@@ -19,6 +19,7 @@ ADMINS = [1866821551]  # شناسه‌های تلگرام ادمین‌ها را
 
 # اطلاعات دیتابیس PostgreSQL (این را از Railway گرفته‌اید یا در سیستم محلی خود تنظیم کنید)
 DATABASE_URL = 'postgresql://postgres:qgnlDHjwgJOAgzEkehjQiUBsORyxaUzO@postgres.railway.internal:5432/railway'  # جایگزین با آدرس دیتابیس خود
+
 # تنظیمات دیتابیس
 Base = declarative_base()
 
@@ -89,6 +90,6 @@ async def main() -> None:
     await application.run_polling()
 
 if __name__ == '__main__':
+    # فقط از run_polling برای شروع ربات استفاده می‌کنیم
     import asyncio
-    # از asyncio.run استفاده نمی‌کنیم و فقط از run_polling برای شروع ربات استفاده می‌کنیم
-    asyncio.run(main())
+    asyncio.run(main())  # از اینجا استفاده می‌کنیم که asyncio خودش حلقه رویداد را مدیریت کند
