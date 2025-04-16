@@ -13,7 +13,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # دریافت توکن ربات از متغیر محیطی
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+TOKEN = os.getenv('BOT_TOKEN')
 
 # دریافت شناسه ادمین‌ها از متغیر محیطی
 ADMINS = list(map(int, os.getenv('ADMINS').split(',')))
@@ -87,10 +87,10 @@ async def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_file))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^/getfile '), send_file))
 
-    # استفاده از run_polling که به طور خودکار حلقه رویداد را مدیریت می‌کند
+    # استفاده از run_polling که خودش حلقه رویداد را مدیریت می‌کند
     await application.run_polling()
 
 if __name__ == '__main__':
-    # اجرای مستقیم تابع main بدون نیاز به asyncio.create_task() یا asyncio.run()
+    # استفاده از run_polling به طور مستقیم و حذف asyncio.run()
     import asyncio
-    asyncio.run(main())
+    asyncio.run(main())  # از اینجا استفاده می‌کنیم که asyncio خودش حلقه رویداد را مدیریت کند
