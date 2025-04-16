@@ -1,78 +1,74 @@
-import http.client
-import json
-import urllib.parse
+import os
+import logging
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import pyshorteners
 
-# توکن ربات تلگرام خود را وارد کنید
-TOKEN = "6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM"  
-API_URL = f"https://api.telegram.org/bot{TOKEN}/"
+# تنظیمات اولیه
+TOKEN = os.getenv('TELEGRAM_TOKEN')  # توکن ربات از Railway
+ADMIN_USERS = [1866821551]  # ID ادمین‌ها
+UPLOAD_DIR = 'uploaded_files/'
 
-# وبهوک که پیام‌های دریافتی را پردازش می‌کند
-def handle_telegram_update(update):
-    if "message" in update:
-        chat_id = update["message"]["chat"]["id"]
+# فعال‌سازی logging برای اشکال‌زدایی
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-        # بررسی نوع پیام
-        if "document" in update["message"] or "video" in update["message"] or "photo" in update["message"]:
-            file_id = None
+# اطمینان از ایجاد دایرکتوری برای ذخیره فایل‌ها
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
 
-            if "document" in update["message"]:
-                file_id = update["message"]["document"]["file_id"]
-            elif "video" in update["message"]:
-                file_id = update["message"]["video"]["file_id"]
-            elif "photo" in update["message"]:
-                # عکس‌ها لیستی از ابعاد مختلف دارند، بنابراین باید آخرین عکس را انتخاب کرد
-                file_id = update["message"]["photo"][-1]["file_id"]
-
-            # دریافت لینک فایل از تلگرام
-            file_link = get_telegram_file_url(file_id)
-
-            # ارسال پیام به کاربر با لینک فایل
-            response_text = f"✅ فایل شما آپلود شد!\n🔗 لینک دانلود: {file_link}"
-            send_message(chat_id, response_text)
-
+# تابع استارت برای کاربرانی که از لینک استارت استفاده می‌کنند
+def start(update: Update, context: CallbackContext) -> None:
+    # دریافت شناسه فایل از داده‌های start
+    file_unique_id = context.args[0] if context.args else None
+    
+    if file_unique_id:
+        # تلاش برای پیدا کردن فایل بر اساس unique_id
+        file_path = os.path.join(UPLOAD_DIR, f"{file_unique_id}.pdf")  # فرض کردیم که فایل PDF است
+        if os.path.exists(file_path):
+            update.message.reply_document(document=open(file_path, 'rb'))
         else:
-            send_message(chat_id, "📂 لطفاً یک فایل ارسال کنید!")
-
-    return "Message processed"
-
-# دریافت لینک فایل از سرور تلگرام
-def get_telegram_file_url(file_id):
-    conn = http.client.HTTPSConnection("api.telegram.org")
-    
-    # ارسال درخواست GET برای دریافت اطلاعات فایل
-    conn.request("GET", f"/bot{TOKEN}/getFile?file_id={file_id}")
-    
-    response = conn.getresponse()
-    result = json.loads(response.read().decode("utf-8"))
-    conn.close()
-    
-    if result["ok"]:
-        file_path = result["result"]["file_path"]
-        return f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
+            update.message.reply_text("متاسفانه فایل مورد نظر یافت نشد.")
     else:
-        return "❌ خطا در دریافت لینک فایل."
+        update.message.reply_text('لطفا فایل ارسال کنید.')
 
-# ارسال پیام به چت تلگرام
-def send_message(chat_id, text):
-    conn = http.client.HTTPSConnection("api.telegram.org")
-    
-    payload = {
-        "chat_id": chat_id,
-        "text": text
-    }
-    
-    headers = {'Content-Type': 'application/json'}
-    
-    # ارسال درخواست POST برای ارسال پیام
-    conn.request("POST", f"/bot{TOKEN}/sendMessage", body=json.dumps(payload), headers=headers)
-    
-    response = conn.getresponse()
-    print(response.read().decode("utf-8"))
-    conn.close()
+# دریافت فایل از کاربر
+def handle_file(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
 
-# تابع اصلی که وبهوک را پردازش می‌کند
-def main(request):
-    update = request.json()  # داده‌های ورودی از ربات تلگرام
+    # چک کردن که آیا کاربر از ادمین‌ها است یا خیر
+    if user_id not in ADMIN_USERS:
+        update.message.reply_text("شما مجاز به ارسال فایل نیستید!")
+        return
 
-    # پردازش آپدیت
-    return handle_telegram_update(update)
+    # دریافت فایل و ذخیره‌سازی آن
+    file = update.message.document
+    if file:
+        # دریافت فایل و ذخیره‌سازی آن
+        file_unique_id = file.file_unique_id
+        file_path = os.path.join(UPLOAD_DIR, f"{file_unique_id}.pdf")
+        file.download(file_path)
+        
+        # ایجاد لینک استارت
+        start_link = f"https://t.me/{update.message.bot.username}?start={file_unique_id}"
+
+        # ارسال لینک استارت به کاربر
+        update.message.reply_text(f"فایل شما با موفقیت ذخیره شد! برای دسترسی به فایل خود، از لینک زیر استفاده کنید:\n{start_link}")
+
+def main():
+    updater = Updater(TOKEN)
+    dispatcher = updater.dispatcher
+
+    # ثبت دستور استارت
+    dispatcher.add_handler(CommandHandler('start', start))
+
+    # ثبت handler برای دریافت فایل
+    dispatcher.add_handler(MessageHandler(Filters.document, handle_file))
+
+    # شروع ربات
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
