@@ -91,6 +91,8 @@ async def main() -> None:
     await application.run_polling()
 
 if __name__ == '__main__':
-    # اجرای مستقیم تابع main بدون استفاده از asyncio.run()
     import asyncio
-    asyncio.get_event_loop().run_until_complete(main())
+
+    # استفاده از asyncio.create_task برای اجرای async code در حلقه رویداد موجود
+    asyncio.create_task(main())
+    asyncio.get_event_loop().run_forever()  # جلوگیری از بستن حلقه رویداد
