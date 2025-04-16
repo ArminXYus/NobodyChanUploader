@@ -1,6 +1,5 @@
 import logging
 import uuid
-import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from sqlalchemy import create_engine, Column, Integer, String, Text
@@ -12,14 +11,14 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# دریافت توکن ربات از متغیر محیطی
-TOKEN = os.getenv('BOT_TOKEN')
+# توکن ربات را مستقیماً وارد کنید
+TOKEN = '6668878971:AAG2S5-H1e-eVk-ffpjYt20bEJp5MRJc-vM'  # جایگزین با توکن واقعی ربات
 
-# دریافت شناسه ادمین‌ها از متغیر محیطی
-ADMINS = list(map(int, os.getenv('ADMINS').split(',')))
+# شناسه‌های ادمین‌ها را مستقیماً وارد کنید
+ADMINS = [1866821551]  # شناسه‌های تلگرام ادمین‌ها را وارد کنید
 
-# اطلاعات دیتابیس PostgreSQL (این را از Railway گرفته‌اید)
-DATABASE_URL = os.getenv("DATABASE_URL")
+# اطلاعات دیتابیس PostgreSQL (این را از Railway گرفته‌اید یا در سیستم محلی خود تنظیم کنید)
+DATABASE_URL = 'postgresql://postgres:qgnlDHjwgJOAgzEkehjQiUBsORyxaUzO@postgres.railway.internal:5432/railway'  # جایگزین با آدرس دیتابیس خود
 
 # تنظیمات دیتابیس
 Base = declarative_base()
@@ -91,6 +90,6 @@ async def main() -> None:
     await application.run_polling()
 
 if __name__ == '__main__':
-    # استفاده از run_polling به طور مستقیم و حذف asyncio.run()
     import asyncio
+    # استفاده از run_polling به طور مستقیم و حذف asyncio.run()
     asyncio.run(main())  # از اینجا استفاده می‌کنیم که asyncio خودش حلقه رویداد را مدیریت کند
